@@ -1,17 +1,15 @@
-# 🐙 Octopied
+# 🐙 Octopied! 🥧
 
 A cozy Cooking Mama-style game where you play as an octopus chef baking pies through interactive minigames!
-
-## About
 
 Use the octopus's flexible tentacles to complete a series of fun, interactive minigames that simulate the pie-making process. Each successful pie earns you points based on how well you follow the recipe!
 
 The game is built with Python and Pygame, featuring smooth physics-based tentacle controls and a recipe system that makes it easy to create new challenges.
 
-### Current Status
+## Current Status
 
 ✅ **Pie Filling Minigame** - Fully functional with geometric shapes (sprite graphics coming soon!)  
-🚧 Coming Soon: Mixing, Rolling, Oven, and Decorating minigames
+🚧 **Coming Soon** - Mixing, Rolling, Oven, and Decorating minigames
 
 ## Getting Started
 
@@ -147,8 +145,4 @@ This is a learning project, but suggestions and feedback are welcome! Feel free 
 
 ## License
 
-This project is open source and available for educational purposes.
-
----
-
-**Enjoy baking with your octopus friend! 🐙🥧**
+MIT License - see LICENSE file for details
