@@ -23,9 +23,14 @@ OCTOPUS_Y = SCREEN_HEIGHT // 2  # Center vertically
 OCTOPUS_RADIUS = 40
 
 # Tentacle settings
+NUM_TENTACLES = 4  # Number of controllable tentacles
 TENTACLE_TIP_RADIUS = 15
 TENTACLE_SMOOTHING = 8.0  # Lower = faster, higher = smoother
 TENTACLE_GRAB_HIGHLIGHT = (255, 200, 220)  # Color when grabbing
+TENTACLE_INACTIVE_COLOR = (200, 100, 140)  # Dimmed color for inactive tentacles
+# Starting angles for tentacles (in degrees, clockwise from top)
+TENTACLE_ANGLES = [45, 90, 135, 180]  # Top-right, Right, Bottom-right, Bottom
+TENTACLE_OFFSET = 80  # Initial distance from octopus center
 
 # Pie crust settings
 PIE_CRUST_X = SCREEN_WIDTH // 2  # Center horizontally
@@ -42,6 +47,7 @@ INGREDIENT_SPAWN_INTERVAL = 1.5  # Seconds between spawns
 # Minigame settings
 MINIGAME_DURATION = 20  # Seconds
 MINIGAME_MAX_SCORE = 100
+PREP_PHASE_DURATION = 5  # Seconds to position tentacles before ingredients spawn
 
 # Physics
 GRAVITY = 0  # Not using gravity, constant fall speed

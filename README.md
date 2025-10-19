@@ -2,9 +2,9 @@
 
 A cozy Cooking Mama-style game where you play as an octopus chef baking pies through interactive minigames!
 
-Use the octopus's flexible tentacles to complete a series of fun, interactive minigames that simulate the pie-making process. Each successful pie earns you points based on how well you follow the recipe!
+Use the octopus's flexible arms to complete a series of fun, interactive minigames that simulate the pie-making process. Each successful pie earns you points based on how well you follow the recipe!
 
-The game is built with Python and Pygame, featuring smooth physics-based tentacle controls and a recipe system that makes it easy to create new challenges.
+The game is built with Python and Pygame, featuring smooth physics-based arm controls and a recipe system that makes it easy to create new challenges.
 
 ## Current Status
 
@@ -60,22 +60,22 @@ Help the octopus chef collect the right ingredients to make a delicious pie! Eac
 
 ### Controls
 
-- **Mouse Movement**: Control the octopus tentacle - it will smoothly follow your cursor
-- **Left Click (Hold)**: Grab an ingredient when the tentacle touches it
+- **Mouse Movement**: Control the active arm - it will smoothly follow your cursor
+- **Left Click (Hold)**: Grab an ingredient when the arm touches it
 - **Left Click (Release)**: Drop the ingredient into the pie crust below
+- **Number Keys (1-4)**: Switch between the octopus's four controllable arms
 - **ESC**: Quit the game
 - **SPACE** (on game over screen): Play again
 
 ### Gameplay & Scoring
 
-You have **20 seconds** to catch ingredients and earn **0-100 points**:
+**Phase 1 - Prep (5s):** Strategically position the octopus's arms. Positioned arms auto-deliver to crust and return to their spots.
 
+**Phase 2 - Catch Ingredients (20s):** Catch ingredients and earn **0-100 points**
 - ✅ **Correct ingredients**: +10-15 points each
 - 🎯 **Complete recipe requirements**: +50 bonus points
 - ⚠️ **Wrong ingredients** (e.g., berries in apple pie): -5 points
 - 💀 **Inedible items** (rocks): Instant game over!
-
-**Tips**: Watch the requirements on the left side of the screen, and drop ingredients carefully into the pie crust to avoid missing them.
 
 ## Creating Custom Recipes
 

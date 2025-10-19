@@ -9,14 +9,31 @@ class Tentacle(GameObject):
     Uses smoothing/lerp to create realistic movement and draws a Bezier curve.
     """
 
-    def __init__(self, octopus):
-        # Initialize at octopus position
-        super().__init__(octopus.position.x, octopus.position.y)
+    def __init__(self, octopus, tentacle_id, angle):
+        """Initialize a tentacle.
+
+        Args:
+            octopus: The octopus object this tentacle is attached to
+            tentacle_id: Unique ID for this tentacle (0-3)
+            angle: Starting angle in degrees from top (clockwise)
+        """
+        # Calculate initial position based on angle
+        import math
+
+        angle_rad = math.radians(angle)
+        x = octopus.position.x + TENTACLE_OFFSET * math.sin(angle_rad)
+        y = octopus.position.y + TENTACLE_OFFSET * math.cos(angle_rad)
+
+        super().__init__(x, y)
         self.octopus = octopus
-        self.target_position = pygame.Vector2(octopus.position.x, octopus.position.y)
+        self.tentacle_id = tentacle_id
+        self.target_position = pygame.Vector2(x, y)
+        self.locked_position = pygame.Vector2(x, y)  # Position when inactive
         self.tip_radius = TENTACLE_TIP_RADIUS
         self.is_grabbing = False
         self.grabbed_object = None
+        self.is_active = False
+        self.auto_grabbing = False  # For inactive tentacles
 
     def update(self, dt):
         """Update tentacle position with smoothing toward target."""
@@ -30,6 +47,11 @@ class Tentacle(GameObject):
     def set_target(self, target_pos):
         """Set the target position for the tentacle tip to move toward."""
         self.target_position = pygame.Vector2(target_pos)
+
+    def lock_position(self):
+        """Lock the tentacle at its current position when becoming inactive."""
+        self.locked_position = self.position.copy()
+        self.target_position = self.locked_position.copy()
 
     def set_grabbing(self, is_grabbing):
         """Set whether the tentacle is in grabbing mode."""
@@ -63,6 +85,10 @@ class Tentacle(GameObject):
         else:
             control = mid
 
+        # Choose color based on active state
+        tentacle_color = COLOR_TENTACLE if self.is_active else TENTACLE_INACTIVE_COLOR
+        line_width = 8 if self.is_active else 5
+
         # Draw the Bezier curve using multiple line segments
         points = []
         segments = 20
@@ -74,10 +100,14 @@ class Tentacle(GameObject):
 
         # Draw the curve
         if len(points) > 1:
-            pygame.draw.lines(screen, COLOR_TENTACLE, False, points, 8)
+            pygame.draw.lines(screen, tentacle_color, False, points, line_width)
 
         # Draw the tip (larger circle)
-        tip_color = TENTACLE_GRAB_HIGHLIGHT if self.is_grabbing else COLOR_TENTACLE
+        if self.is_grabbing:
+            tip_color = TENTACLE_GRAB_HIGHLIGHT
+        else:
+            tip_color = tentacle_color
+
         pygame.draw.circle(
             screen,
             tip_color,
@@ -92,6 +122,25 @@ class Tentacle(GameObject):
             (int(self.position.x), int(self.position.y)),
             self.tip_radius // 2,
         )
+
+        # Draw tentacle number
+        font = pygame.font.Font(None, 20)
+        number_text = font.render(str(self.tentacle_id + 1), True, (255, 255, 255))
+        text_rect = number_text.get_rect(
+            center=(int(self.position.x), int(self.position.y))
+        )
+        screen.blit(number_text, text_rect)
+        
+        # Draw auto-grab range indicator for inactive tentacles
+        if not self.is_active and not self.is_grabbing:
+            # Draw a subtle circle showing the grab range
+            pygame.draw.circle(
+                screen,
+                (*tentacle_color[:2], tentacle_color[2], 50),  # Semi-transparent
+                (int(self.position.x), int(self.position.y)),
+                self.tip_radius * 2,
+                1  # Line width
+            )
 
     def collides_with_point(self, point):
         """Check if a point collides with the tentacle tip."""

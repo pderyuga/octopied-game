@@ -27,7 +27,17 @@ class MinigameFilling(MinigameBase):
 
         # Initialize game objects
         self.octopus = Octopus(OCTOPUS_X, OCTOPUS_Y)
-        self.tentacle = Tentacle(self.octopus)
+
+        # Create multiple tentacles
+        self.tentacles = []
+        for i in range(NUM_TENTACLES):
+            tentacle = Tentacle(self.octopus, i, TENTACLE_ANGLES[i])
+            self.tentacles.append(tentacle)
+
+        # Set first tentacle as active
+        self.active_tentacle_index = 0
+        self.tentacles[0].is_active = True
+
         self.pie_crust = PieCrust(PIE_CRUST_X, PIE_CRUST_Y)
         self.spawner = IngredientSpawner(self.recipe)
 
@@ -38,6 +48,11 @@ class MinigameFilling(MinigameBase):
         # Game state
         self.mouse_pos = (OCTOPUS_X, OCTOPUS_Y)
         self.mouse_pressed = False
+        
+        # Phase management
+        self.instructions_phase = True
+        self.prep_phase = False 
+        self.prep_time_remaining = PREP_PHASE_DURATION
 
         # Initialize font for UI
         pygame.font.init()
@@ -56,19 +71,40 @@ class MinigameFilling(MinigameBase):
         Returns:
             True if minigame should continue, False if complete
         """
-        # Update timer
-        self.elapsed_time += dt
+        # Instructions phase - no updates needed, waiting for user to skip
+        if self.instructions_phase:
+            return True
+        
+        # Handle prep phase
+        if self.prep_phase:
+            self.prep_time_remaining -= dt
+            if self.prep_time_remaining <= 0:
+                self.prep_phase = False
+                # Reset spawner timer when exiting prep phase
+                self.spawner.time_since_spawn = 0
+        
+        # Update timer (only counts during active phase, not instructions or prep)
+        if not self.prep_phase and not self.instructions_phase:
+            self.elapsed_time += dt
 
-        # Update tentacle position to follow mouse
-        self.tentacle.set_target(self.mouse_pos)
-        self.tentacle.update(dt)
+        # Get active tentacle
+        active_tentacle = self.tentacles[self.active_tentacle_index]
 
-        # Update spawner and spawn new ingredients
-        self.spawner.update(dt)
-        if self.spawner.should_spawn():
-            new_ingredient = self.spawner.spawn()
-            if new_ingredient:
-                self.falling_ingredients.append(new_ingredient)
+        # Update active tentacle position to follow mouse (only during prep and active phases)
+        if not self.instructions_phase:
+            active_tentacle.set_target(self.mouse_pos)
+
+        # Update all tentacles' physics
+        for tentacle in self.tentacles:
+            tentacle.update(dt)
+
+        # Update spawner and spawn new ingredients (only after prep phase)
+        if not self.prep_phase:
+            self.spawner.update(dt)
+            if self.spawner.should_spawn():
+                new_ingredient = self.spawner.spawn()
+                if new_ingredient:
+                    self.falling_ingredients.append(new_ingredient)
 
         # Update all falling ingredients
         for ingredient in self.falling_ingredients[:]:
@@ -81,27 +117,31 @@ class MinigameFilling(MinigameBase):
                     ingredient.set_state("missed")
 
             elif ingredient.state == "grabbed":
-                # Grabbed ingredient follows tentacle
-                ingredient.position = self.tentacle.position.copy()
+                # Grabbed ingredient follows the tentacle that grabbed it
+                # Find which tentacle is holding this ingredient
+                for tentacle in self.tentacles:
+                    if tentacle.grabbed_object == ingredient:
+                        ingredient.position = tentacle.position.copy()
+                        break
 
-        # Handle grabbing logic
-        if self.mouse_pressed and not self.tentacle.is_grabbing:
-            # Try to grab an ingredient
+        # Handle grabbing logic for active tentacle only
+        if self.mouse_pressed and not active_tentacle.is_grabbing:
+            # Try to grab an ingredient with active tentacle
             for ingredient in self.falling_ingredients:
-                if ingredient.state == "falling" and self.tentacle.collides_with(
+                if ingredient.state == "falling" and active_tentacle.collides_with(
                     ingredient
                 ):
                     # Grab this ingredient
-                    self.tentacle.set_grabbing(True)
-                    self.tentacle.grab_object(ingredient)
+                    active_tentacle.set_grabbing(True)
+                    active_tentacle.grab_object(ingredient)
                     ingredient.set_state("grabbed")
                     break
 
-        elif not self.mouse_pressed and self.tentacle.is_grabbing:
-            # Release the grabbed ingredient
-            released = self.tentacle.release_object()
+        elif not self.mouse_pressed and active_tentacle.is_grabbing:
+            # Release the grabbed ingredient from active tentacle
+            released = active_tentacle.release_object()
             if released:
-                self.tentacle.set_grabbing(False)
+                active_tentacle.set_grabbing(False)
 
                 # Check if ingredient lands in crust
                 if self.pie_crust.collides_with(released):
@@ -117,6 +157,38 @@ class MinigameFilling(MinigameBase):
                 else:
                     # Dropped outside crust, let it continue falling
                     released.set_state("falling")
+
+        # Auto-grab and auto-drop logic for inactive tentacles
+        for tentacle in self.tentacles:
+            if not tentacle.is_active:
+                if not tentacle.is_grabbing:
+                    # Try to auto-grab nearby falling ingredients
+                    for ingredient in self.falling_ingredients:
+                        if ingredient.state == "falling" and tentacle.collides_with(ingredient):
+                            tentacle.set_grabbing(True)
+                            tentacle.grab_object(ingredient)
+                            ingredient.set_state("grabbed")
+                            break
+                else:
+                    # Move toward crust with grabbed ingredient
+                    tentacle.set_target(self.pie_crust.position)
+                    
+                    # Check if over crust - auto-drop
+                    if self.pie_crust.collides_with(tentacle.grabbed_object):
+                        released = tentacle.release_object()
+                        if released:
+                            tentacle.set_grabbing(False)
+                            released.set_state("in_crust")
+                            self.falling_ingredients.remove(released)
+                            self.pie_crust.add_ingredient(released)
+                            self.ingredients_in_crust.append(released)
+                            
+                            # Instant loss for inedible items
+                            if released.category == "inedible":
+                                self.is_active = False
+                            
+                            # Return to locked position
+                            tentacle.set_target(tentacle.locked_position)
 
         # Check if time is up
         if self.is_complete():
@@ -135,8 +207,9 @@ class MinigameFilling(MinigameBase):
         # Draw octopus
         self.octopus.draw(screen)
 
-        # Draw tentacle
-        self.tentacle.draw(screen)
+        # Draw all tentacles
+        for tentacle in self.tentacles:
+            tentacle.draw(screen)
 
         # Draw falling ingredients
         for ingredient in self.falling_ingredients:
@@ -145,8 +218,86 @@ class MinigameFilling(MinigameBase):
         # Draw UI
         self._draw_ui(screen)
 
+    def _draw_instructions_overlay(self, screen):
+        """Draw the static instructions overlay."""
+        # Darker overlay since no interaction needed
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(180)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+        
+        # Large title
+        large_font = pygame.font.Font(None, 64)
+        title_text = large_font.render("HOW TO PLAY", True, (255, 255, 100))
+        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 150))
+        screen.blit(title_text, title_rect)
+        
+        # Instructions
+        instructions = [
+            "Use your octopus's 4 arms to catch ingredients!",
+            "",
+            "Controls:",
+            "  • Press 1-4 to switch between arms",
+            "  • Move mouse to control active arm",
+            "  • Click to grab/release ingredients",
+            "",
+            "Strategy:",
+            "  • Position arms strategically before time starts",
+            "  • Positioned arms auto-catch nearby ingredients",
+            "  • Avoid wrong ingredients and rocks!",
+        ]
+        
+        y_offset = 240
+        for instruction in instructions:
+            if instruction:
+                inst_text = self.small_font.render(instruction, True, (255, 255, 255))
+                inst_rect = inst_text.get_rect(center=(SCREEN_WIDTH // 2, y_offset))
+                screen.blit(inst_text, inst_rect)
+            y_offset += 32
+        
+        # Skip prompt
+        skip_font = pygame.font.Font(None, 40)
+        skip_text = skip_font.render("Press SPACE to start!", True, (100, 255, 100))
+        skip_rect = skip_text.get_rect(center=(SCREEN_WIDTH // 2, 540))
+        screen.blit(skip_text, skip_rect)
+    
+    def _draw_countdown_overlay(self, screen):
+        """Draw the prep phase countdown (no overlay for full visibility)."""
+        # Large title
+        large_font = pygame.font.Font(None, 64)
+        title_text = large_font.render("POSITION YOUR ARMS!", True, (255, 255, 100))
+        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 250))
+        screen.blit(title_text, title_rect)
+        
+        # Quick reminder
+        reminder = "Press 1-4 to switch • Move mouse to position"
+        reminder_text = self.small_font.render(reminder, True, (255, 255, 255))
+        reminder_rect = reminder_text.get_rect(center=(SCREEN_WIDTH // 2, 320))
+        screen.blit(reminder_text, reminder_rect)
+        
+        # Countdown
+        countdown_font = pygame.font.Font(None, 96)
+        countdown = int(self.prep_time_remaining) + 1  # Shows 5,4,3,2,1
+        countdown_text = countdown_font.render(
+            str(countdown),
+            True,
+            COLOR_TIMER
+        )
+        countdown_rect = countdown_text.get_rect(center=(SCREEN_WIDTH // 2, 420))
+        screen.blit(countdown_text, countdown_rect)
+
     def _draw_ui(self, screen):
         """Draw UI elements like timer, score, and requirements."""
+        # Draw instructions overlay if in instructions phase
+        if self.instructions_phase:
+            self._draw_instructions_overlay(screen)
+            return
+        
+        # Draw countdown overlay if in prep phase
+        if self.prep_phase:
+            self._draw_countdown_overlay(screen)
+            return  # Don't draw normal UI during prep
+        
         # Draw timer
         remaining_time = self.get_remaining_time()
         timer_text = self.font.render(
@@ -225,3 +376,41 @@ class MinigameFilling(MinigameBase):
     def handle_mouse_button(self, pressed):
         """Handle mouse button events."""
         self.mouse_pressed = pressed
+
+    def handle_key_press(self, key):
+        """Handle keyboard events for tentacle switching and skipping instructions.
+
+        Args:
+            key: The pygame key constant (e.g., pygame.K_1, pygame.K_SPACE)
+        """
+        # Handle SPACE to skip instructions phase
+        if key == pygame.K_SPACE and self.instructions_phase:
+            self.instructions_phase = False
+            self.prep_phase = True
+            return
+        
+        # Switch tentacle based on number key (1-4)
+        if key == pygame.K_1:
+            self._switch_tentacle(0)
+        elif key == pygame.K_2:
+            self._switch_tentacle(1)
+        elif key == pygame.K_3:
+            self._switch_tentacle(2)
+        elif key == pygame.K_4:
+            self._switch_tentacle(3)
+
+    def _switch_tentacle(self, index):
+        """Switch to the specified tentacle.
+
+        Args:
+            index: The index of the tentacle to switch to (0-3)
+        """
+        if 0 <= index < NUM_TENTACLES and index != self.active_tentacle_index:
+            # Lock current tentacle's position
+            current_tentacle = self.tentacles[self.active_tentacle_index]
+            current_tentacle.is_active = False
+            current_tentacle.lock_position()
+
+            # Activate new tentacle
+            self.active_tentacle_index = index
+            self.tentacles[index].is_active = True

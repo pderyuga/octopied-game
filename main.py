@@ -54,6 +54,9 @@ def main():
                     minigame = MinigameFilling("recipes/apple_pie.json")
                     minigame.start()
                     game_complete = False
+                elif not game_complete:
+                    # Handle tentacle switching (keys 1-4)
+                    minigame.handle_key_press(event.key)
 
         if not game_complete:
             # Update game
