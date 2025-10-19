@@ -1,0 +1,13 @@
+{
+  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "always"
+    }
+  },
+  "black-formatter.path": ["./.venv/bin/python", "-m", "black"]
+}

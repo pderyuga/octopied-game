@@ -1,0 +1,32 @@
+{
+  "name": "Apple Pie",
+  "duration": 20,
+  "required_ingredients": {
+    "apple": 5,
+    "cinnamon": 2
+  },
+  "allowed_ingredients": {
+    "apple": {
+      "points": 10,
+      "category": "good"
+    },
+    "cinnamon": {
+      "points": 15,
+      "category": "good"
+    },
+    "berry": {
+      "points": -5,
+      "category": "bad"
+    },
+    "rock": {
+      "points": -20,
+      "category": "inedible"
+    }
+  },
+  "spawn_rates": {
+    "apple": 0.4,
+    "cinnamon": 0.2,
+    "berry": 0.2,
+    "rock": 0.2
+  }
+}

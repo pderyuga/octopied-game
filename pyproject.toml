@@ -1,0 +1,28 @@
+[project]
+name = "octopied-game"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pygame==2.6.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+]
+
+[tool.black]
+line-length = 88  # Black's default (or customize to your preference)
+target-version = ['py313']  # Match your Python version
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories to exclude
+  \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
