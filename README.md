@@ -25,7 +25,7 @@ The game is built with Python and Pygame, featuring smooth physics-based tentacl
 1. **Clone the repository**
 
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/pderyuga/octopied-game.git
    cd octopied-game
    ```
 
